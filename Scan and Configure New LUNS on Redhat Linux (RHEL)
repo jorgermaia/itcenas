@@ -1,0 +1,36 @@
+Found another useful thing on the web. This is the quick guide to rescan and configure newly added LUNS in Linux. 
+
+
+To configure the newly added LUNS on RHEL: 
+
+
+# ls /sys/class/fc_host
+ host0  host1  host2  host3
+fdisk -l 2>/dev/null | egrep '^Disk' | egrep -v 'dm-' | wc -l
+echo "1" > /sys/class/fc_host/host0/issue_lip
+echo "- - -" > /sys/class/scsi_host/host0/scan
+echo "1" > /sys/class/fc_host/host1/issue_lip
+echo "- - -" > /sys/class/scsi_host/host1/scan
+echo "1" > /sys/class/fc_host/host2/issue_lip
+echo "- - -" > /sys/class/scsi_host/host2/scan
+echo "1" > /sys/class/fc_host/host3/issue_lip
+echo "- - -" > /sys/class/scsi_host/host3/scan
+cat /proc/scsi/scsi | egrep -i 'Host:' | wc -l
+fdisk -l 2>/dev/null | egrep '^Disk' | egrep -v 'dm-' | wc -l
+
+Alternatively, we can
+run the re-scan-scsi script. 
+
+To scan new LUNs on Linux operating system which is using QLogic driver 
+You need to find out driver proc file /proc/scsi/qlaXXX. 
+For example on my system it is /proc/scsi/qla2300/0 
+Once file is identified you need to type following command (login as the root):
+ 
+# echo "scsi-qlascan" > /proc/scsi/qla2300/0
+ # cat /proc/scsi/qla2300/0
+
+Now use the script rescan-scsi-bus.sh new LUN as a device. Run script as follows:
+ 
+# ./rescan-scsi-bus.sh -l -w
+
+The output of ls -l /sys/block/*/device should give you an idea about how each device is connected to the system. 
