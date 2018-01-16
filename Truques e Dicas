@@ -1,0 +1,101 @@
+Adicionar Data e Hora ao bash_history
+echo 'export HISTTIMEFORMAT="%d/%m/%y %T "' >> ~/.bash_profile
+
+Scan HBAs
+for i in /sys/class/scsi_host/host*/scan; do echo "- - -" > $i; done
+
+Pingar as gateways
+for i in $( netstat -rnv | grep UG | grep -v Gateway | grep -v tables | grep -v 127.0.0.1| awk '{ print $2 }' | sort -u); do echo "====$i====" ; ping $i -c2 ; done
+
+Desapresentar um disco na máquina/kernel
+echo 1 > /sys/block/sda/device/delete
+
+Lista o nome do user e ocupação da respectiva homedir
+for i in `ls /home`; do du -hs $i; getent passwd $i | awk -F/ '{print $5 " " $6}'; done
+
+Número de CPUs:
+# cat /proc/cpuinfo | grep "physical id" | sort | uniq | wc -l
+4
+
+Número de Cores:
+# cat /proc/cpuinfo | egrep "core id|physical id" | tr -d "\n" | sed s/physical/\\nphysical/g | grep -v ^$ | sort | uniq | wc -l
+40
+
+Accounts com passwords vazias
+awk -F: '($2 == "") {print}' /etc/shadow
+
+Listar crontab de todos os users
+for user in $(cut -f1 -d: /etc/passwd); do echo $user; crontab -u $user -l; done
+
+Lista crontabs de todos os users, mas corta crontabs vazios e comentarios dos crontabs existentes
+for user in $(cut -f1 -d: /etc/passwd); do crontab -u $user -l 2>/dev/null | grep -v '^#'; done
+
+Devices associados a um LV/VG
+lvs -o +devices
+vgs -o +devices
+
+Gerar password
+< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c${1:-8};echo;
+
+Reboot SysReq
+unRaw      (take control of keyboard back from X),
+ tErminate (send SIGTERM to all processes, allowing them to terminate gracefully),
+ kIll      (send SIGKILL to all processes, forcing them to terminate immediately),
+  Sync     (flush data to disk),
+  Unmount  (remount all filesystems read-only),
+reBoot.
+echo 1 > /proc/sys/kernel/sysrq
+echo "b" > /proc/sysrq-trigger
+
+Apagar deleted (SOS)
+use lsof to find the deleted, but open, file still consuming space
+lsof | grep -i delete
+
+find the entry in /proc/PROCESSID/fd/ that cooresponds to the filehandle
+
+> filehandle
+
+SystemD
+systemd-analyze - To check how much time the system required to boot
+systemd-analyze blame - Check how much each process took to start
+systemctl list-unit-files - List of all available units
+systemctl list-units - If you want to see only the running ones
+systemctl enable name.service - Manage the system services
+systemctl disable name.service 
+systemctl start name.service
+systemctl stop name.service
+systemctl restart name.service
+systemctl status name.service
+systemctl reload name.service
+systemctl mask cron.service - Prevent a unit from starting you can mask it
+
+RHEL7 Single User/Rescue Mode e Emergency Mode
+Single User/Rescue Mode
+systemd.unit=rescue.target
+
+Emergency Mode
+systemd.unit=emergency.target
+
+https://access.redhat.com/documentation/en-US/Red_Hat_Enterprise_Linux/7/html/System_Administrators_Guide/sec-Terminal_Menu_Editing_During_Boot.html
+
+Desactivar CTRL-ALT-DEL
+RHEL 3,4,5
+https://access.redhat.com/solutions/1058
+
+RHEL 6
+https://access.redhat.com/solutions/449373
+
+RHEL 7
+https://access.redhat.com/solutions/1123873
+
+Manter somente 5 dias de backup
+find /home/mysqlbackup/ -type f -mtime +5 | xargs rm -rf
+
+Check remote port withou telnet
+Cat < /dev/tcp/<ip>/80
+
+Acesso à internet para máquinas Linux
+Na máquina as01prdrepolinux:
+# ssh -R 3128:localhost:3128 amait@Ipdamaquinaqueprecisadeiràinternet
+Na máquina que precisa de ir à Internet:
+# export http_proxy="http://localhost:3128"
