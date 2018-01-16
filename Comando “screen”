@@ -1,0 +1,23 @@
+O comando screen é uma ferramenta muito pouco utilizada mas de grande utilidade uma vez que permite correr processos em background independentes da sessão do utilizador. Seguem alguns atalhos de teclas utilizados no screen.
+
+Combinação 	Acção
+Ctrl+a c 	nova janela
+Ctrl+a n 	próxima janela
+Ctrl+a p 	janela anterior
+Ctrl+a “ 	escolher janela da lista
+Ctrl+a Ctrl+a 	ultima janela ativa
+Ctrl+a S 	dividir terminal horizontalmente em regiões
+Ctrl+a | 	dividir terminal verticalmente em regiões
+Ctrl+a :resize 	redimensionar região
+Ctrl+a :fit 	adaptar a resolução do monitor ao tamanho do novo terminal
+Ctrl+a :remove 	remover região
+Ctrl+a tab 	mover para a próxima região
+Ctrl+a d 	desanexar o screen do terminal
+Ctrl+a A 	definir titulo da janela
+Ctrl+a x 	bloquear sessão
+Ctrl+a [ 	entrar no modo de copia
+Ctrl+a ] 	buffer de paste
+Ctrl+a > 	escrever  o paste buffer para fichero
+Ctrl+a < 	ler o paste buffer do ficheiro
+Ctrl+a ? 	ver key bindings/nomes dos comandos
+Ctrl+a : 	screen command prompt
