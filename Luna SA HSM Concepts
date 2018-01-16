@@ -1,0 +1,79 @@
+Luna SA HSM Concepts
+A Hardware Storage Module (HSM) is a more secure alternative to the keystore file most Java developers are familiar with. The HSM stores cryptographic data such as private keys and certificates in RAM or flash storage. Through software APIs, the Luna HSM participates in cryptographic operations like digital signatures without actually releasing the secured credentials to your applications, where they potentially could be exported or misused.
+This was an important point for me to understand. Initially, I thought that I could get a private key and certificate chain from my Luna HSM at application startup, just like a keystore file, and then cache the credentials in memory for when I needed them. But it doesn’t work that way: the Luna API objects only give you pointers to data stored on the HSM; not the data themselves. My ‘cached certificates’ only resulted in NullPointerExceptions because the connections had expired by the time I tried to use them.
+Most HSM devices include extra-paranoid security features to ensure that the data they hold does not fall into hostile hands. In addition to requiring authentication to use stored objects, the Luna SA includes tamper-detection features like a chassis opening sensor and an internal thermometer. If an intrusion is detected, the HSM erases its storage to prevent sensitive data from being stolen. You will want to make sure that all of your data center admins are aware of these features to prevent accidents!
+The Luna SA also includes dedicated hardware for accelerated cryptographic calculations. Some models have high availability features.
+Administration
+There are multiple layers of systems on a Luna SA:
+	• The appliance operating system
+	• The HSM card
+	• Logical partitions created within the HSM
+The operating system’s root user is named ‘admin’. Admin can manage the device’s base configuration: networking, time, hardware settings. You can give the admin password to to data center staff who maintain the appliance, because the admin user has no authorization to access the HSM contained within.
+The HSM itself is installed in a ‘slot’ inside the Luna SA. (I don’t know if ‘slot’ refers to a physical slot for an expansion card or just a logical interface to the HSM hardware. On the Luna SA 5, the built-in HSM is in slot 1 and slots 2 – 4 are available for backup devices to plug into.) The HSM has its own administrator, apart from the OS admin. It is sometimes referred to as the ‘security officer’ or ‘SO’ in documentation. You can manage the HSM by first logging into the Luna as the OS admin and then running the hsm command and supplying the security officer password.
+Within the HSM, the SO can configure logical partitions for storage of crypto artifacts. Each partition has its own password. So one Luna SA can be used by multiple groups or applications. At my company, we’ve created one partition for certificates used by developers and another for production. That satisfies the regulatory requirement for separation of duties and controls between development and production personnel.
+Some administration functions are done from a command line on the Luna. Others need to be performed remotely, using the command line tools that are provided with the client software.
+Luna SA Setup
+Turning on the appliance for the first time and configuring networking is pretty straightforward and is explained well by the documentation, so I don’t think it’s necessary for me to cover it. The only questions our network admin had for me related to some HSM-specific terms in the documentation.
+Cloning refers the the backup process for the HSM. To permit the contents of the HSM to be backed up to a USB token, you need to enable cloning and assign the same cloning domain name to both the HSM and the backup token.
+PIN means ‘password’ – at least in our configuration. If you have configured FIPS 140-2 Level 3 security, then the authentication process is different.
+Manufacturer Documentation
+Complete documentation, including a Getting Started guide and a full listing of options for all of the commands used below, is included with the Luna SA client software, in the form of a collection of HTML pages which you can unzip into a local directory. In addition, once you have the client software installed, you will find a Java API Guide and example code in the Program Files\LunaSA\JSP directory on your computer.
+Installing Client Software
+Instructions are provided for installing and configuring on Windows and AIX, since those are the operating systems I have worked with. The process for Linux or other UNIX breeds is probably pretty similar to AIX.
+Tips for installing the client software:
+Windows
+	• The main installer launches several other installs before it completes. If you’re developing in Java or Groovy, you need the Java Security Provider (JSP). If you’re developing in C, you need the C Security Provider (CSP).
+	• You may need to add C:\Program Files\LunaSA\JSP\lib to PATH in your Windows environment variables. (This puts LunaAPI.dll on java.library.path. You can run groovy -e “println System.getProperty(‘java.library.path’)” from a command line to verify what’s injava.library.path.)
+	• Make sure there is a Windows environment variable named “ChrystokiConfigurationPath” and add it if it is missing. The value should indicate the location of the crystoki.ini file, which should be “C:\Program Files\LunaSA” in the default installation.
+AIX
+	• Before starting the installation, ensure that you have a Random Number Generator (RNG) or Entropy Gathering Daemon (EGD) on your system at one of /dev/egd-pool, /etc/egd-pool, /etc/entropy, or /var/run/egd-pool.
+	• If you’re developing in Java or Groovy, answer ‘Y’ to install the Java Security Provider (JSP) and ‘Y’ to install the SDK.
+	• Following installation, it is necessary to configure any environment where the Luna client is going to be used so that the Java runtime can interface with the native libLunaAPI.solibrary. Some of these methods for setting java.library.path are redundant. If you don’t have libLunaAPI.so on java.library.path, it will result in
+java.lang.UnsatisfiedLinkError: LunaAPI_64 (Not found in java.library.path)
+	• Add /usr/lunasa/jsp/lib/ to the PATH environment variable
+	• Add -Djava.library.path=/usr/lunasa/jsp/lib/ to the JAVA_OPTS environment variable
+	• Add “/usr/lunasa/jsp/lib/” to the LIBPATH environment variable
+	• Include /usr/lunasa/jsp/lib/LunaProvider.jar in your CLASSPATH
+Registering a Client with the Luna HSM
+The client software communicates with the HSM using SSH. Before you can start working with the crypto features, you will need to set up a trust between your client and the HSM by exchanging keys.
+My experience has indicated that when a command requires you to specify a hostname you should provide only the unqualified hostname, without the domain name, for the server or client. The tools create files using the hostnames you enter, and in some cases, extra periods in the filenames seem to cause issues. Also, be consistent with case when you type the hostnames. They are added to configuration files and certificates exactly as you type them.
+	• On the client, open a command prompt and cd to the directory where the client software is installed. On Windows that will be C:\Program Files\LunaSA. On AIX that will probably be /usr/lunasa/bin.
+	• Download a copy of the server’s public key. On AIX, you can use the built in secure copy (scp) command. For Windows, PuTTY pscp is included with the client software.
+	• Windows:
+scp admin@<hsm_hostname>:server.pem ../cert/server
+	• AIX:
+pscp admin@<hsm_hostname>:server.pem ./cert/server
+	• Configure your client to trust the server. This step uses the vtl client command.
+	• Windows:
+vtl addServer -n <hsm_hostname> -c cert/server/server.pem
+	• AIX:
+./vtl addServer -n <hsm_hostname> -c ../cert/server/server.pem
+	• Generate a private key for your client. Running this command will cause two files to be created in LunaSA/cert/client.
+	• Windows:
+vtl createCert -n <client_hostname>
+	• AIX:
+./vtl createCert -n <client_hostname>
+	• Export the client cert you generated and transmit it to the server. Note that there is a colon on the end of the server’s hostname, designating that you want to copy your client certificate to the root directory on the server. If you leave the colon off, it will result in the error message “Local to local copy not supported”.
+	• Windows:
+pscp "cert\client\<client_hostname>.pem" admin@<hsm_hostname>:
+	• AIX:
+scp ../cert/client/<client_hostname>.pem admin@<hsm_hostname>:
+	• On the hsm command line, associate the key file to your client by hostname. This command registers the client by its DNS hostname. If your client isn’t found in DNS, the HSM can’t see it.
+client register -client <client_hostname> -hostname <client_hostname>
+	• Assign the client to a partition. (Note that you can get a list of partition names by issuing the partition list command.) You will need to know the partition password.
+	• On the hsm command line:
+client assignPartition -client <client_hostname> -partition <partition_name>
+	• Confirm the setup. On the client command line:
+vtl verify
+Requesting and Importing Certificates
+	• On the client, open a command prompt and cd to the directory where the client software is installed. On Windows that will be C:\Program Files\LunaSA. On AIX that will probably be /usr/lunasa/bin.
+	• Generate public and private keys using the certificate management utility, cmu. Once you have objects stored on the HSM, you will reference them by either numeric handle or textlabel. It’s best to give the keys descriptive labels, such as “developer_private_key” or “widgetco_inc_public_key”. The handles are just numeric ids assigned automatically when you upload objects.
+cmu generatekeypair -modulusbits=2048 -publicexponent=65537 -sign=T -verify=T -labelpublic="<public_key_label>" -labelprivate="<private_key_label>"
+	• Create a certificate request. You can use the cmu list command to show a list of objects stored on the HSM, including the handle and label assigned to each. If there is only one keypair on the partition, the following command defaults to it. If there are more than one, you must also specify -publichandle and -privatehandle options.
+cmu requestcertificate -c="<two_letter_country_code>" -o="<organization_name>" -cn="<common_name>" -s="<state>" -l="<city/locality>" -publichandle=<public_handle> -privatehandle=<private_handle> -outputfile=""
+	• The next step depends on the procedure that your certificate authority uses. But it will probably go something like this: Go to the certificate authority’s website and follow their procedures to request a new certificate. At the point when you are given a chance to supply a certificate request of your own, open the CSR file you generated and paste the text from it into the certificate request window. Download the certificate files that are generated from it, following the website’s instructions. When you are done, you should have a certificate file and one or more CA certificate files downloaded to your client.
+	• Import each certificate into the HSM partition. Assign each file that you import a meaningful, unique label.
+cmu import -inputFile="<filepath_and_filename_of_cert>" -label="<certificate_label>"
+	• If, for any reason, you need to change a label or other attribute after import, you can use the cmu setAttribute command.
+cmu list
+cmu setAttribute -handle=<handle> -label=<new_label>
