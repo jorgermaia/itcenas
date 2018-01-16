@@ -1,0 +1,713 @@
+man -k command | grep 1 5 8
+
+Linux File System Layout
+
+Tar
+
+# tar cvf /root/etc.tar /etc
+c - create
+v - verbose
+f - file to create 
+
+czvf  (tgz - compressed file)
+
+# tar tvf (view contents of file)
+
+t - (show contents)
+
+-C (change directory)
+
+# tar xvf etc.tar -C /tmp
+# tar xvf  /root/etc.tar -C / etc/wgetrc (extract only one file)
+
+# tar czvf /dest.tgz
+
+Working With Text Files 
+
+Regular Expressions
+
+To use with: grep vim awk sed
+# man 7 regex
+
+
+
+Common text tools
+
+cat 
+less
+tail (last 10 lines) -n more lines
+head (first 10 lines) 
+cut -f 1 -d : /etc/passwd (cuts the 1st column and with separator :) 
+sort (sorts files -n by number -f case insensitive)
+tr (translante)
+# echo hello | tr a-z A-Z
+# echo hello | tr [:lower:] [:upper:]
+
+Working with Grep
+
+# grep -iR lisa 2> /dev/null | grep -v Bynary (grep insensitive recursive for lisa pipe it to -v wich means dont show)
+
+Sed and awk basics
+
+# sed -i 's/lisa/julia/g' /etc/passwd    (substitute globally lisa for julia on passwd)
+
+# ps aux | grep apache | awk '{ print $2 }'  (prints the second column of the results)
+
+
+
+Connect to a Red Hat Server
+
+SSH Keys
+
+# ssh-keygen (creates  rsa key pair // key in /home/user/.ssh/id_rsa   // pub in /home/user/.ssh/id_rsa.pub )
+# ssh-copy-id servername (copy ssh pub to remote server)
+# scp newfile servername.com:/root/
+ 
+Manage User and Groups
+
+!! In /etc/shadow means that the user is disabled
+
+# usermod -aG account laura (add laura to the group account)
+
+/etc/login.defs (definitions when creating users)
+ /etc/default/useradd (default useradd defs)
+/etc/skel/ (skeleton for home dirs)
+
+# chage -l julia (overview of password settings for julia)
+
+
+Connecting to an Ldap server
+
+# authconfig (command line)
+# yum install authconfig-gtk (install graphical interface)
+# yum install nscd nss-pam-ldapd pam_ldap (aditional packages)
+
+# authconfig-gtk (graphical user interface)
+# authconfig-tui (text user interface)
+
+Understanding Automount
+
+/etc/auto.master
+ -> /home/guests                     /etc/auto.guests
+
+/etc/auto.guests
+ ->
+   * -fstype=cifs,username=ldapusers,password=password\
+    ://server.rhatcertification.com/data/&
+
+Configuring Automount
+
+# yum install autofs (install automount package)
+
+# vim /etc/auto.master
+	->
+	/home/guests             /etc/auto.guests
+	
+# vim /etc/auto.guests
+	->
+	*            -rw            nfsservername:/home/guests/&         (name of the directory on the share server)
+	or
+	*            -fstype=cifs,username=ldapusers,password=password ://server.rhatcertification.com/data/&
+
+
+Configuring NFS and Automount
+
+# yum search nfs 
+# yum install nfs-utils
+# vim /etc/exports
+	->
+	/data     -rw     *(rw,no_root_squash)
+	
+# systemctl start nfs
+
+# showmount -e localhost (show exports)
+# mount localhost:/data /mnt  
+
+# vim /etc/auto.master (create automount)
+	->
+	/nfsserver      /etc/auto.nfsserver
+	
+# vim /etc/auto.nfsserver
+	->
+	blah     -rw        localhost:/data
+	
+# systemctl restart autofs
+
+Modifying nslcd configuration
+
+/etc/nsswitch.conf 
+
+/etc/pam.d (configuration files)
+/etc/nslcd.conf (nlscd config file)
+/etc/openldap (troubleshooting)
+
+
+Managing Permissions
+
+# chgrp sales sales (change group)
+# chown lori sales (change owner)
+
+# chmod 750 myfile
+
+Read = 4
+Write = 2
+Execute = 1
+
+Special Permissions:
+
+
+
+
+
+# find / -perm /4000 (find det user id files)
+
+ACL's
+
+ /etc/fstab or systemd
+ 
+# tune2fs in ext
+
+setfacl and getfacl
+
+# setfacl -m g:sales:rx /data/account  (g:sales:rx    -  group sales can read and execute)
+# setfacl -m d:g:sales:rx /data/account (default ACL)
+
+(-R recursive -m modify )
+
+To set ACL's on directories you need 2 commands setfacl and setfacl default
+
+Configuring Networking
+
+NIC Naming
+
+BIOS Naming :
+	Ø em[1-N]
+	Ø p<slot_number>p<port_number>
+	
+Udev Naming :
+	Ø Classical ethX naming
+	
+Physical Naming :
+	Ø Same has BIOS naming
+	
+Logical Naming :
+	Ø .<vlan> and :<alias>
+	
+
+IP Command
+
+# ip help (help on ip command)
+# ip link show (shows interfaces)
+# ip addr show (shows ip adrress information) 
+# ip route show (show routing table)
+
+Configure persistent IP Configuration
+
+# /etc/sysconfig/network-scripts/
+# /etc/hostname (file with the hostname)
+
+ # /etc/resolv.conf (not used anymore)
+
+Netwok Manager
+
+# nmcli
+# nmtui
+
+# nmcli con add con-name test ifname ens33 type ethernet ip4 10.0.0.15/24 (create a new connection)
+# nmcli conn down ens33 (bring the connection down)
+# nmcli conn up test (bring the connection test up)
+
+# systemctl restart NetworkManager
+
+Utilities
+ 
+# hostname
+# ping
+# traceroute
+# dig
+# nmap
+# netstat (-i packet info -tulpen open ports) 
+
+
+
+
+Backgroud jobs
+
+FG to BG
+# dd if=/dev/zero of=/dev/null
+Ctrl + z
+# bg
+
+START IN BG
+# dd if=/dev/zero of=/dev/null &
+
+
+
+RPM's
+
+# rpm -ivh blabla (intall, verbose, hash)
+# rpm -qf /path/sbin (query rpm package)
+# rpm -ql rpmname (show all items in package)
+# rpm -qc rpmname (show config files)
+# rpm -qd rpmname (show doc files)
+# rpm -qa (list all packages installed)
+# rpm -q --scripts httpd (querie installation scripts "installed ones")
+# rpm -qp --scripts rpmfile (querie installation scripts "not installed ones")
+
+
+
+ examples (get version)
+# rpm -qa | grep http
+
+# repoquery -ql packagename (querie repo for package items)
+
+
+
+Setup yum repos
+
+ 
+# cd /etc/yum.repos.d/
+# vim myrepo.repo
+# createrepo /path_to_rpms (make repo indexes)
+ 
+
+
+[myrepo (label)]
+name=myrepo
+baseurl=file:///repo
+gpgcheck=0
+
+ yum 
+
+# yum repolist (show list of repos)
+# yum search bla (search packages)
+# yum list all
+# yum list installed
+# yum whatprovides */string
+# yum remove blabla (-y no confirmation)
+# yum localinstall blabla (install rpm not in repo but search for dependencies in repo)
+
+
+Globing and Wildcards
+
+* - any string
+? - any character
+[mh]ost - character options m or h
+[!mh]ost - character options not m or h
+[0-9][0-9]script - series in this case with 2 digits on the begining of file 
+
+# ls -d p*  (lists only directories and not contents)
+
+
+KVM virtualization
+
+[root@localhost ~]# egrep 'vmx | svm' /proc/cpuinfo
+libvirtd
+
+virt-manager - KVM gui 
+virsh - virtulization shell
+virt-install - gui to install virtual machines
+
+
+# virsh list  (overview of virtual machines currently running)
+# virsh list --all  (overview of all the virtual machines)
+# virsh destroy vmname (stops vm imediatly)
+# virsh start vmname (starts virtual machine)
+ 
+
+/etc/libvirt/qemu  -  config files for all the virtual machines
+
+# virsh edit vmname - (edit vm configuration)
+
+yum install -y  kvm libvirt virt-manager quemu.kvm (install all kvm packages)
+
+
+ 
+Scheduling Tasks 
+
+cron vs at
+ 
+/etc/crontab (nice example regarding cron - not used to create crons)
+/etc/cron.d/ (files with cron commands)
+/etc/cron.daily/ (shell scripts that run daily - anacron - cant control time that runs)
+ 
+
+
+# crontab -e (edit crons for user)
+
+At runs only once
+
+# at 14:30 (schedule command to 14:30)
+at> command
+CTRL + D to schedule
+
+# atq (view at scheduled comands)
+# atrm jobnumber (remove job)
+
+Logging 
+
+Journalctl - (journald - startup info)
+Rsyslog - (current activity)
+
+Log journald to rsyslog
+/etc/rsyslog.conf
+$ModLoad imuxsock
+$OmitLocalLogging Off
+/etc/rsyslog.d/listend.conf
+$SystemLogSocketName /run/systemd/journal/syslog
+
+Log rsyslog to journald
+/etc/rsyslog.conf
+$ModLoad omjournal *.* :omjournal:
+
+
+journald 
+
+(is integrated with systemctl)
+
+journalctl -b (boot info)
+journalctl --since=yesterday (journal since yesterday)
+journalctl -u servicename (jornallog from specific systemd process)
+journalctl -u servicename -o verbose (jornallog from specific systemd process in verbose mode)
+
+journalctl _COMM=su (looks for specific command)
+
+
+
+logrotate 
+
+/etc/logrotate.conf (configuration file generic log rotate)
+/etc/logrotate.d/ (specific log rotate)
+
+
+
+
+I/O redirects and pipes |
+
+Stdin   - 0   <
+Stdout -1    > overwrite or  >> append
+Stderr  -2   2> 
+
+
+Managing Partitions 
+
+XFS (default file system)
+
+
+
+Partitions and formats
+
+# fdisk /dev/sdb (create partitions)
+
+/proc/partitions (show partitions known by kernel)
+
+# mkfs.xfs -L myfs /dev/sdb1 ( -L label - this command formats the partition)
+
+Mount
+
+# blkid (UUID of devices)
+
+# mount LABEL=myfs /mnt (mount based on label)
+ 
+# xfs_admin  -L boot /dev/sda1 (crate laber for xfs partition)
+
+
+LUKS Encrypted partirion
+
+Create partition with fdisk
+# partprobe /dev/sdb (update partition table)
+# cryptsetup luksFormat /dev/sdb2 (format partition encryption)
+# cryptsetup luksOpen /dev/sdb2 partitionname (open encrypted partition)
+# ls /dev/mapper (should contain the encrypted partition)
+# mkfs.xfs /dev/mapper/partitionname
+# mount /dev/mapper/partitionname /mountpoint (mount partition)
+
+ Disconnect partition
+# umount /mountpoint
+# cryptsetup luksClose /dev/mapper/partitionname
+
+
+To add to /etc/fstab create the file:
+/etc/crypttab
+	Ø partition name  /dev/sdb2  none
+	
+
+Dealing with "Enter root password for mantenance mode" 
+
+# journalctl -xb (show on boot errorsLVM 
+
+
+
+PV - phisical volume (partition)
+VG - Volume group
+
+Create Logical Volumes
+
+Start by create a partition with fdisk
+
+Change partition type  (fdisk option 3 look for Linux LVM)
+
+# pvcreate /dev/sdb3 (create physical volume)
+# pvs (shows physical volumes)
+
+# vgcreate VGName /dev/sdb3 (create volume group)
+# vgs (shows volume groups)
+
+# lvcreate -n LVmylv -L 96M VGName  /create logical volume with name LVmylv and 96M size on VG VGName)
+# lvs (shows logical volumes) 
+
+# mkfs.ext2 /dev/VGName/LVmylv  (make filesystem on /dev/VG/LV)
+
+LVM resize operations
+
+Extend
+
+# vgextend VGName /dev/sdb5 (extend VG to new physical partition)
+# lvextend  -l +100%FREE -r  /dev/VGName/LVmylv (extend logical volume to free space and resize to fs)
+
+Shrink
+
+XFS (doesent support shrinking)
+
+Needs to be unmounted
+
+# resize2fs /dev/VGName/LVmylv 100M (reduce filesystem)
+# lvreduce -L 102400K /dev/VGName/LVmylv  (reduce Logical volume)
+
+# lvreduce -L 50M -r /dev/VGName/LVmylv (reduce  LV with FS resize)  
+
+
+Advanced System Administration Tasks
+
+# lsmod (view loaded kernel modules)
+# udevadm monitor (traps all udev events on kernel events)
+
+Load and unload modules
+
+# modprobe -r modname (remove module and dependencies)
+# modprobe  modname (loads kernel module manually)
+ 
+Modify kernel module behaviour
+
+# modinfo modname (info regarding kernel module)
+/lib/modprobe.d/
+/etc/modprobe.d/
+# man 5 modprobe.d (man file )
+
+options iwlwifi led_mode=1
+
+Tunning kernel trough /proc
+
+/proc/sys
+
+Sysctl
+
+# sysctl -a (overview of all tunnables currently set) 
+/etc/sysctl.conf (instruction on where to make configs)
+
+ Update Kernel
+
+#  yum update kernel
+# rpm -Uvh kernel.rpm
+
+Using kickstart 
+
+/root/anaconda-ks.cfg (default install kickstart)
+# yum install system-config-kickstart (install gui kickstart generator)
+# system-config-kickstart 
+
+
+On install press TAB an add:
+ks=locationofksfile.cfg
+
+Grub
+ 
+/etc/default/grub   (most important grub file)
+/etc/grub.d
+# grub2-mkconfig (update the boot loader)
+
+Access grub boot menu by pressing ESC
+
+>systemd.unit=emergency.target (start in trobleshooting mode)
+
+Systemd
+
+Unit files
+Services
+Targets
+
+
+/usr/lib/systemd (default scripts)
+/etc/systemd (modified scripts)
+
+# systemctl list-units --type=target (lists active targets)
+
+Targets
+
+poweroff.target
+Rescue.target
+Multiuser.target
+Graphical.target
+Reboot.target
+
+Emergency.target (minimal mode, even more than rescue)
+
+# systemctl isolate rescue.target (change system target to rescue) 
+# systemctl list-units --type=target (lists active targets)
+
+
+FROM GRUB
+
+Type 'e'
+Go to line wich starts with linux16
+At the end of the line specify 
+
+systemd.unit=rescue.target
+
+The press CTRL+x to start system
+
+
+Mounts in Systemd
+
+/usr/lib/systemd/system (.mount files are mount points)
+/etc/systemd/system (create a file something.mount) 
+
+[Unit]
+Description = mount name
+
+[Mount]
+what  = /dev/vgdisk/lvdisk
+where = /mountpoint
+Type = xfs
+
+[Install]
+wantedBy = multi-user.target
+
+
+# systemctl start something.mount (start the mount point)
+# systemctl enable something.mount (enables the mount point on startup)
+
+AutoMounts in Systemd
+
+/etc/systemd/system (create a file something.automount) 
+
+[Unit]
+Description = automount name
+
+[Automount]
+where = /mountpoint
+
+[Install]
+wantedBy = multi-user.target
+
+The name of the automount have to correspond to the name of the mount
+
+
+Essential Troubeshooting skills
+
+Make grub changes persistent
+# grub2-mkconfig -o /boot/grub2/grub.cfg
+
+Use rd.break to reset root password
+
+Add rd.break to the grub startup line
+
+# mount -o remount,rw /sysroot
+# chroot /sysroot
+# echo secret | passwd --stdin root
+# touch /.autorelabel
+
+SElinux
+
+/etc/sysconfig/selinux
+
+system_u:object_r:admin_home_t
+User          : Role      : Context
+ 
+# getsebool -a (bolleans available)
+
+Manage Context
+
+# semanage  (fcontext is interesting)
+(view man pages to use examples)
+
+# restorecon -R /etc  (restore context)
+
+File System Labels
+
+# semanage fcontext -l
+# man -k _selinux
+
+# yum provides */sepolicy  
+Install sepolicy
+# sepolicy manpage -a  (creates the manpages for selinux)
+# mandb (updates man database)
+# man -k _selinux
+
+# mv /tmp/* /usr/share/man/man8 (moves selinux manpages to the proper path)
+
+Semanage fcontext VS chcon
+
+NEVER use chcon
+
+ Booleans
+
+# getsebool -a (bolleans available)
+# setbool booleanname on/off (not persistent)
+# semanage boolean -l (view booleans state)
+# setsebool -P booleanname  on/off (persistent)
+
+SELinux Log Files
+
+# yum list installed | grep setrouble 
+
+Selinux logs to auditd service wich needs to be running
+
+# grep AVC  /var/log/audit/audit.log (all selinux events are tagged with AVC)
+
+/var/log/messages (search for sealert)
+
+
+Configure SELinux for Apache
+
+To change the context use semanage  (man semanage and then man semanage-context)
+
+Configuring Firewalld
+
+# firewall-cmd (text user interface)
+# firewall-config (GUI)
+
+# firewall-cmd --list-all (view default firewall zone)
+# firewall-cmd --get-zones (view firewall zones)
+# firewall-cmd --get-services(view firewall services)
+# firewall-cmd --get-default-zone(view default firewall zone)
+
+/etc/firewalld/services (path to create new firewall services)
+/usr/lib/firewalld/services (default firewall services)
+ 
+# firewall-cmd  --zone=home  --add-service=servicename  (add service to zone not persistent)
+# firewall-cmd  -- permanent --zone=home  --add-service=servicename  (add service to zone persistent)
+
+
+
+ Configuring FTP Services
+
+VSFTPD (defaul FTP server)
+
+/etc/vsftp/  (configuration files)
+
+/var/ftp/       (document root for FTP)
+
+# yum install vsftpd
+ 
+# firewall-cmd --list-all (view default firewall zone)
+
+
+ Configuring TIME Services
+
+# hwtime (hardwaretime)
+ 
+# timedatectl set-time (configure time)
+# timedatectl set-ntp yes (enable ntp - enables the chronyd.service)
+
+Set up a Chrony Timeserver
