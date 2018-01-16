@@ -1,0 +1,14 @@
+1- criar um ficheiro de texto com o nome manifest.txt com o seguinte conteudo 
+
+Permissions: all-permissions
+Codebase: http://www.codebase.com/myApp/dist
+Application-Name: My Application
+
+	2- Adicionar o ficheiro manifest.txt ao ficheiro jar com o comando
+	
+	jar ufm myApp.jar manifest.txt
+	
+3 - Assinar o applet com o certificado utilizando o seguinte comando
+
+
+jarsigner myApp.jar -keystore certificate.pfx 1 -storetype pkcs12
