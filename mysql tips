@@ -1,0 +1,64 @@
+View backup/restore progress
+
+SELECT session_id as SPID, command, a.text AS Query, start_time, percent_complete, dateadd(second,estimated_completion_time/1000, getdate()) as estimated_completion_time 
+FROM sys.dm_exec_requests r CROSS APPLY sys.dm_exec_sql_text(r.sql_handle) a 
+WHERE r.command in ('BACKUP DATABASE','RESTORE DATABASE')
+
+BACKUP PARA DEV/NULL
+
+USE [database_name]
+
+backup database [database_name] TO DISK = N'NUL'
+backup log [database_name] TO DISK = N'NUL'
+
+ -- para saber o nome lógico do log file
+SELECT file_id,name,type_desc,physical_name FROM sys.database_files  where type_desc = 'LOG'
+ 
+GO
+DBCC SHRINKFILE ('[database_name]_log', 0) -- usar o "name" da query anterior
+GO
+
+Esta query permite-te saber ao momento o que está a ser executado.
+
+select percent_complete,* from sys.dm_exec_requests where session_id >50
+
+Performance Top Queries by Total CPU Time
+
+select top 10 rank() over(order by total_worker_time desc,sql_handle,statement_start_offset) as row_no
+,       (rank() over(order by total_worker_time desc,sql_handle,statement_start_offset))%2 as l1
+,       creation_time
+,       last_execution_time
+,       (total_worker_time+0.0)/1000 as total_worker_time
+,       (total_worker_time+0.0)/(execution_count*1000) as [AvgCPUTime]
+,       total_logical_reads as [LogicalReads]
+,       total_logical_writes as [logicalWrites]
+,       execution_count
+,       total_logical_reads+total_logical_writes as [AggIO]
+,       (total_logical_reads+total_logical_writes)/(execution_count + 0.0) as [AvgIO]
+,   case when sql_handle IS NULL
+                then '' 
+                else ( substring(st.text,(qs.statement_start_offset+2)/2,(case when qs.statement_end_offset = -1        then len(convert(nvarchar(MAX),st.text))*2      else qs.statement_end_offset    end - qs.statement_start_offset) /2  ) )
+        end as query_text 
+,       db_name(st.dbid) as database_name
+,       st.objectid as object_id
+from sys.dm_exec_query_stats  qs
+cross apply sys.dm_exec_sql_text(sql_handle) st
+where total_worker_time > 0 
+order by total_worker_time  desc
+
+Find high impact queries with sys.dm_exec_query_stats
+
+SELECT TOP 5
+   t.text as 'SQL Text', 
+   st.execution_count , 
+   ISNULL( st.total_elapsed_time / st.execution_count, 0 ) as 'AVG Excecution Time',
+   st.total_worker_time / st.execution_count as 'AVG Worker Time',
+   st.total_worker_time,
+   st.max_logical_reads, 
+   st.max_logical_writes, 
+   st.creation_time,
+   ISNULL( st.execution_count / DATEDIFF( second, st.creation_time, getdate()), 0 ) as 'Calls Per Second'
+FROM sys.dm_exec_query_stats st
+   CROSS APPLY sys.dm_exec_sql_text( st.sql_handle )  t
+ORDER BY 
+   st.total_elapsed_time DESC
