@@ -1,0 +1,48 @@
+Preparação do Ambiente (SQUID Specific)
+
+Desabilitar SELINUX e FIREWALLD
+
+# yum clean all
+# yum -y update
+# yum -y install squid
+# systemctl start squid
+# systemctl enable squid
+# cd /etc/squid/
+# mkdir ssl_cert
+# chown squid:squid ssl_cert/
+# chmod 700 ssl_cert
+# cd ssl_cert
+# openssl req -new -newkey rsa:2048 -sha256 -days 365 -nodes -x509 -extensions v3_ca -keyout myCA.pem  -out myCA.pem
+# openssl x509 -in myCA.pem -outform DER -out myCA.der   (myCA.der - Ficheiro a instalar nos clientes)
+# /usr/lib64/squid/ssl_crtd -c -s /var/lib/ssl_db
+# chown squid:squid -R /var/lib/ssl_db
+
+
+Configuração /etc/squid/squid.conf
+
+Comentar a linha:
+
+#http_port 3128
+
+Adicionar as seguintes configurações:
+
+http_port 0.0.0.0:3128 ssl-bump generate-host-certificates=on dynamic_cert_mem_cache_size=16MB  cert=/etc/squid/ssl_cert/myCA.pem
+sslcrtd_program /usr/lib64/squid/ssl_crtd -s /var/lib/ssl_db -M 4MB
+sslcrtd_children 10
+sslproxy_options NO_SSLv2,NO_SSLv3,SINGLE_DH_USE
+ssl_bump server-first
+sslproxy_cert_error allow all
+
+acl ssl_step1 at_step SslBump1
+acl ssl_step2 at_step SslBump2
+acl ssl_step3 at_step SslBump3
+ssl_bump peek ssl_step1
+ssl_bump splice all
+
+Reiniciar o SQUID
+
+# systemctl restart squid
+
+Ficheiro de Log
+
+/var/log/squid/access.log
